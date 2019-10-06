@@ -1,0 +1,60 @@
+# delay is a time interval between 
+# frames
+#   delay=1s
+#   delay=100ms
+delay=100ms
+
+# frame offset by X coordinate
+offset-x=2
+
+# frame offset by Y coordinate
+offset-y=4
+
+# final animatino frame, using in final animation
+active-frame=1-2,4,5-*
+
+# repeat animation
+repeat=true
+
+--------
+ \_/
+\= =/
+  ^
+---
+ \_/
+|= =|
+  ^  
+------
+ |_|
+|= =|
+  ^
+---
+#:delay=400ms
+#:offset-y=3
+ |_|
+|=^=|
+
+---------
+#:delay=200ms
+ |_|
+|= =|
+  ^
+--------
+ \_/
+\= =/
+  ^
+--------
+ \_/
+\= =/
+  ^
+
+
+
+
+
+
+
+
+
+
+
