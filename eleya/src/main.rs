@@ -1,12 +1,37 @@
 
 use std::{env, str, fs, process::exit, str::Lines};
-use crate::parser::animation_struct::{Animation, AnimationConfiguration, Frame};
+use crate::parser::animation_struct::{Animation, Frame, FrameConfiguration};
+use std::iter::FromIterator;
+use std::borrow::Borrow;
+use syntax::util::map_in_place::MapInPlace;
+
 mod parser;
 
-static mut AnimationStack:Animation = Animation::new();
+//static mut ANIMATION_STACK:Animation = Animation::new();
 
-fn create_simple_data_struct(){
-    println!("saulda");
+fn clean_up_string(string: &String) -> &str{
+    string.trim()
+}
+
+fn parse_parameter(line: Vec<char>) -> (String, String) {
+    let param = line[2..];
+    if String::from_iter(param).trim().len() == 0 { return Option::None }
+    if param.contains(&'=') {
+        let position_of_eq = Iterator::position(param, |&x| x == '=');
+        if let Some(pos) = position_of_eq{
+            let param_name:&str = clean_up_string(&String::from_iter(param[1..pos]));
+            let value:&str = clean_up_string(( &String::from_iter(param[pos..])));
+            // TODO: return param with value
+
+        } else {
+            return ( String::from(" - "), String::from(" - "));
+        }
+
+    } else {
+        return (String::from("dupa"), String::from("chuj"));
+    }
+
+    return (String::from("dupa"), String::from("chuj"));
 }
 
 fn create_animation(path: &String){
@@ -15,17 +40,21 @@ fn create_animation(path: &String){
     let file:String = fs::read_to_string(path).expect("");
     let lines:Vec<&str> = file.lines().collect();
 
+
     if  lines.len() == 0 {return}
 
     for line in lines {
-
         let char_array: Vec<char> = line.chars().collect();
-        if char_array.len() > 0 && char_array[0] == '#' {
-            println!("Komment " );
+        if char_array.len() == 0 {
+            continue;
         }
-        else {
-            println!("Line => {}", line);
+
+
+        match String::from_iter(&char_array[0..2]).as_str() {
+            "#:" =>
+            _ =>
         }
+
     }
     //println!("Content:\n{}", anim_file);
 }
@@ -38,11 +67,12 @@ fn exit_program(){
 fn main() {
     let cli_arguments: Vec<String> = env::args().collect();
     let animation_file_path:Option<&String> = cli_arguments.get(1);
-    match animation_file_path {
-        Option::Some(path) => create_animation(path),
-        Option::None => exit_program(),
-    }
+//    match animation_file_path {
+//        Option::Some(path) => create_animation(path),
+//        Option::None => exit_program(),
+//    }
 
 
     println!("Input arguments {:?}", cli_arguments);
+
 }

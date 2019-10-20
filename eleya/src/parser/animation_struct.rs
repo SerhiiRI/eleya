@@ -1,26 +1,22 @@
-pub enum AnimationConfiguration{
+pub enum FrameAvailableConfiguration{
     Delay{delay: u32},
     XOffset(u8),
     YOffset(u8),
 }
-impl AnimationConfiguration{
-    pub fn delay(time_scale: &str, delay: u32) -> AnimationConfiguration{
+
+pub struct FrameConfiguration(FrameAvailableConfiguration);
+impl FrameConfiguration{
+    pub fn x_offset(offset: u8){ FrameConfiguration(FrameAvailableConfiguration::XOffset(0)); }
+    pub fn y_offset(offset: u8){ FrameConfiguration(FrameAvailableConfiguration::YOffset(0)); }
+    pub fn delay(time_scale: &str, delay: u32) -> FrameConfiguration{
         if delay < 0 {
-            return AnimationConfiguration::Delay {delay: 0};
+            return FrameConfiguration(FrameAvailableConfiguration::Delay {delay: 0});
         }
         match time_scale {
-            "s"  => AnimationConfiguration::Delay {delay: delay * 1000},
-            "ms" => AnimationConfiguration::Delay {delay: delay},
-            _    => AnimationConfiguration::Delay {delay: delay},
+            "s"  => FrameConfiguration(FrameAvailableConfiguration::Delay {delay: delay * 1000}),
+            "ms" => FrameConfiguration(FrameAvailableConfiguration::Delay {delay: delay}),
+            _    => FrameConfiguration(FrameAvailableConfiguration::Delay {delay: delay}),
         }
-    }
-
-    pub fn x_offset(offset: u8){
-        AnimationConfiguration::XOffset{0};
-    }
-
-    pub fn y_offset(offset: u8){
-        AnimationConfiguration::YOffset{0};
     }
 }
 
@@ -28,14 +24,19 @@ impl AnimationConfiguration{
 
 pub struct Frame {
     pub frame:  Vec<String>,
-    pub config: Vec<AnimationConfiguration>,
+    pub config: Vec<FrameConfiguration>,
 }
-
+impl Frame {
+    pub fn new() -> Frame{
+        Frame{ frame: Vec::new(), config: Vec::new() }
+    }
+}
 
 
 pub struct Animation{ pub frames: Vec<Frame> }
 impl Animation {
-    pub const fn new() -> Animation{
+    pub fn new() -> Animation{
         Animation{ frames: Vec::new() }
     }
+
 }
