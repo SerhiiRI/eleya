@@ -12,36 +12,6 @@ fn clean_up_string(string: String) -> String{
     String::from(string.trim())
 }
 
-fn parse_parameter(line: Vec<char>) -> (String, String) {
-    // #:dupa=123
-    let param = &line[2..];
-    println!("1: {}", String::from_iter(param));
-    // dupa=123
-    if String::from_iter(param).trim().len() == 0 { return (String::from("error"), String::from("error")); }
-    if param.contains(&'=') {
-        let position_of_eq = param.iter().position(|&x| x == '=');
-        // let position_of_eq = Iterator::position(param, |&x| x == '=');
-        if let Some(pos) = position_of_eq {
-            // if line has '=' symbol
-            let param_name: String = clean_up_string(String::from_iter(&param[0..pos]));
-            let value: String = clean_up_string((String::from_iter(&param[(pos+1)..])));
-            if param_name.contains(' ') {
-                // du pa=123
-                return (String::from(" - "), String::from(" - "))
-            }
-            match &param_name.len() {
-                // du pa=123
-                0 => return (String::from(" - "), value),
-                // =123
-                _ => return (param_name, value),
-            }
-        } else {
-            // dupa123
-            return (String::from_iter(param), String::from(""));
-        }
-    }
-    return (String::from("error"), String::from("error"));
-}
 
 type uColumn = u16;
 fn parse_parameter_opt(line: Vec<char>) -> Result<(String, String), (uColumn, String)> {
