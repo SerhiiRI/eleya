@@ -115,56 +115,6 @@ fn create_animation(path: &String){
     for i in &default_animation_config{
         i.print();
     }
-
-//    for line in lines {
-//        let char_array: Vec<char> = line.chars().collect();
-//        if char_array.len() == 0 {
-//            continue;
-//        }
-//        if char_array.len() == 1 {
-//            if let '#' = &char_array[0] {
-//                comment(line);
-//                continue
-//            }
-//        }
-//        if char_array.len() >= 2 {
-//            if let "# " = &(String::from_iter(&char_array)[0..2]) {
-//                comment(line);
-//                continue
-//            }
-//        }
-//
-//        if let "#:" = &(String::from_iter(&char_array)[0..2]) {
-//            match parse_parameter_opt(char_array.clone()) {
-//                Result::Ok((parameter, value)) => {
-//                    debug("param parsing", format!("{}={}", parameter, value).as_str())
-//                },
-//                Result::Err((err_col, err_msg)) => {
-//                    error(String::from_iter(&char_array).as_str(), "Parsing error", err_msg.as_str(), 0, err_col);
-//                }
-//            }
-//        } else {
-//            println!("| {}", line)
-//        }
-//
-//    }
-
-//    println!("PARAM : ");
-//    let line:Vec<char> = "#:suka job=".chars().collect();
-//    if let "#:" = &(String::from_iter(&line).as_str()[0..2]) {
-////        let (param, value) = parse_parameter(line);
-//        match parse_parameter_opt(line.clone()) {
-//            Result::Ok((parameter, value)) => {
-//                let str_line = format!("Param -'{}' value - '{}'", parameter, value);
-//                println!("{}", str_line);
-//            },
-//            Result::Err((err_col, err_msg)) => {
-//                error(String::from_iter(&line).as_str(), "Parsing error", err_msg.as_str(), 0, err_col);
-//            }
-//        }
-//    } else {
-//        println!("line | {}", String::from_iter(line));
-//    }
 }
 
 fn exit_program(){
