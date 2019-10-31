@@ -12,6 +12,7 @@ use std::borrow::Borrow;
 type uColumn = u16;
 type uLine   = u32;
 
+
 fn clean_up_string(string: String) -> String{
     String::from(string.trim())
 }
@@ -44,30 +45,36 @@ fn parse_parameter_opt(line: Vec<char>) -> Result<(String, String), (uColumn, St
 
 
 
+
 fn create_animation(path: &String){
 //    let mut frame_global_config: FrameConfiguration = Vec::new();
-
+    let mut animation = Animation::new();
     println!("Animation File:{} ", path);
     let file:String = fs::read_to_string(path).expect("");
     let lines:Vec<&str> = file.lines().collect();
     let mut default_animation_config = initialize_global_configuration();
-
     if  lines.len() == 0 {return}
     let mut line_iterator = lines.iter();
+    let mut line_number = 0;
+    let line_number_max = lines.len() - 1;
     loop {
-        if let Some(&line) = line_iterator.next() {
+        if line_number != line_number_max {
+            let line = lines[line_number];
+//        if Some(&line) = line_iterator.next() {
             let char_array: Vec<char> = line.chars().collect();
             line.len();
-            if char_array.len() == 0 { continue; }
+            if char_array.len() == 0 { line_number += 1; continue; }
             if char_array.len() == 1 {
                 if let '#' = &char_array[0] {
                     comment(line);
+                    line_number += 1;
                     continue
                 }
             }
             if char_array.len() >= 2 {
                 if let "# " = &(String::from_iter(&char_array)[0..2]) {
                     comment(line);
+                    line_number += 1;
                     continue
                 }
             }
@@ -75,14 +82,14 @@ fn create_animation(path: &String){
                 match parse_parameter_opt(char_array.clone()) {
                     Ok((parameter, value)) => {
                         match parameter.as_str() {
-                            "delay" => {
+                            "delay"    => {
                                 if let Some(delay) = FrameConfiguration::parse_delay(&value){
                                     default_animation_config.push(delay);
                                 }
                             },
                             "offset-y" => {},
                             "offset-x" => {},
-                            _ => {}
+                            _          => {}
                         };
                         debug("param parsing", format!("{}={}", parameter, value).as_str())
                     },
@@ -91,28 +98,38 @@ fn create_animation(path: &String){
                     }
                 }
             }
+            if let "---" = &(String::from_iter(&char_array)[0..3]) {
+                let mut frame:Frame = Frame::new();
+                line_number += 1;
+                loop {
+                    if line_number == line_number_max
+                        || ( lines[line_number].len() >= 3 && &lines[line_number][0..3] == "---" ) {break;}
+                    println!("register line of frame ");
+                    frame.frame.push(lines[line_number].to_string());
+                    line_number += 1;
+                }
+                frame.config = default_animation_config.to_vec();
+                animation.frames.push(frame);
+                if line_number == line_number_max {
+                    continue;
+                }
+                if lines[line_number].len() >= 3 && &lines[line_number][0..3] == "---" {
+                    line_number -= 1;
+                    continue;
+                }
+
+            }
+
             else {
                 println!("| {}", line)
             }
-            if let "---" = &(String::from_iter(&char_array)[0..3]) {
-
-            }
-            if let "--" = &(String::from_iter(&char_array)[0..3]) {
-
-            }
-            if let "-" = &(String::from_iter(&char_array)[0..3]) {
-
-            }
-
-
-
-
+            line_number += 1;
         } else {
             break
         }
     }
-    println!("Parameters stack length {}", &default_animation_config.len());
-    for i in &default_animation_config{
+    println!("FUCK ! {}", &animation.frames.len());
+    for i in animation.frames.iter(){
         i.print();
     }
 }

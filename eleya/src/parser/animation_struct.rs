@@ -22,6 +22,7 @@
 
 use std::iter::FromIterator;
 
+#[derive(Copy, Clone)]
 pub enum FrameConfiguration{
     Delay{delay: u32},
     XOffset(u8),
@@ -45,15 +46,12 @@ impl FrameConfiguration{
         let unparsed_value:Vec<char> = value.chars().collect();
         let numeral_part:&Vec<char> = &unparsed_value.clone().into_iter().filter(|&c| c.is_digit(10)).collect();
         let string_part:&Vec<char> = &unparsed_value.clone().into_iter().filter(|&c| !c.is_digit(10)).collect();
-        if numeral_part.len() > 0 {
-            return Option::Some(FrameConfiguration::Delay {delay : 100 });
-        }
         if let Result::Ok(value) = String::from_iter(numeral_part).parse::<u32>(){
             match String::from_iter(string_part).as_str() {
-                "s" => return Option::Some(FrameConfiguration::Delay { delay: value * 1000 }),
-                "" => return Option::Some(FrameConfiguration::Delay { delay: value }),
-                "ms" => return Option::Some(FrameConfiguration::Delay { delay: value }),
-                _ => return Option::None,
+                "s"   => return Option::Some(FrameConfiguration::Delay { delay: value * 1000 }),
+                "ms"  => return Option::Some(FrameConfiguration::Delay { delay: value }),
+                ""    => return Option::Some(FrameConfiguration::Delay { delay: value }),
+                _     => return Option::None,
             }
             return Option::None;
         }
@@ -64,7 +62,6 @@ impl FrameConfiguration{
             FrameConfiguration::Delay { delay: delay_time } => { println!("Delay time {}", delay_time) },
             FrameConfiguration::XOffset(offset) => { println!("X-Offset {}", offset)},
             FrameConfiguration::YOffset(offset) => { println!("Y-Offset {}", offset); },
-
         }
     }
 }
@@ -79,6 +76,17 @@ impl Frame {
     pub fn new() -> Frame{
         Frame{ frame: Vec::new(), config: Vec::new() }
     }
+    pub fn print(&self){
+        println!("______ Frame ______");
+        println!("Frame: ");
+        for config in self.config.iter(){
+            config.print();
+        }
+        for string in self.frame.iter(){
+            println!("{}", string);
+        }
+        println!("_______ END _______");
+    }
 }
 
 
@@ -87,7 +95,6 @@ impl Animation {
     pub fn new() -> Animation{
         Animation{ frames: Vec::new() }
     }
-
 }
 
 
@@ -96,7 +103,7 @@ pub fn initialize_global_configuration() -> Vec<FrameConfiguration>{
     configuration:Vec<FrameConfiguration> = Vec::new();
     configuration.push(FrameConfiguration::YOffset(0));
     configuration.push(FrameConfiguration::XOffset(0));
-    configuration.push(FrameConfiguration::Delay { delay: 100 });
+    configuration.push(FrameConfiguration::Delay{delay:100});
     configuration
 }
 
