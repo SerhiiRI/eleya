@@ -42,10 +42,22 @@ impl FrameConfiguration{
             _ => FrameConfiguration::Delay { delay }
         }
     }
+    pub fn parse_yoffset(value:&str) -> Option<FrameConfiguration> {
+	if let Result::Ok(value) = String::from_iter(numeral_part).parse::<u8>(){
+	    return Option::Some(FrameConfiguration::YOffset(value));
+	}
+	Option::None
+    }
+    pub fn parse_xoffset(value:&str) -> Option<FrameConfiguration> {
+	if let Result::Ok(value) = String::from_iter(numeral_part).parse::<u8>(){
+	    return Option::Some(FrameConfiguration::XOffset(value));
+	}
+	Option::None
+    }
     pub fn parse_delay(value:&str) -> Option<FrameConfiguration> {
         let unparsed_value:Vec<char> = value.chars().collect();
-        let numeral_part:&Vec<char> = &unparsed_value.clone().into_iter().filter(|&c| c.is_digit(10)).collect();
-        let string_part:&Vec<char> = &unparsed_value.clone().into_iter().filter(|&c| !c.is_digit(10)).collect();
+        let numeral_part :&Vec<char> = &unparsed_value.clone().into_iter().filter(|&c| c.is_digit(10)).collect();
+        let string_part  :&Vec<char> = &unparsed_value.clone().into_iter().filter(|&c| !c.is_digit(10)).collect();
         if let Result::Ok(value) = String::from_iter(numeral_part).parse::<u32>(){
             match String::from_iter(string_part).as_str() {
                 "s"   => return Option::Some(FrameConfiguration::Delay { delay: value * 1000 }),
@@ -66,11 +78,27 @@ impl FrameConfiguration{
     }
 }
 
+#[derive(Copy, Clone)]
+pub struct FrameSetting{
+    pub xoffset: FrameConfiguration,
+    pub yoffset: FrameConfiguration,
+    pub delay  : FrameConfiguration
+}
+impl FrameSetting {
+    pub fn new() -> FrameSetting{
+	let mut setting : FrameSetting = FrameSetting;
+	setting.xoffset = FrameConfiguration::XOffset(0);
+	setting.yoffset = FrameConfiguration::YOffset(0);
+	setting.delay   = FrameConfiguration::Delay{delay:100};
+	setting
+    }
+}
+
 
 
 pub struct Frame {
     pub frame:  Vec<String>,
-    pub config: Vec<FrameConfiguration>,
+    pub config: FrameSetting,
 }
 impl Frame {
     pub fn new() -> Frame{
@@ -79,15 +107,16 @@ impl Frame {
     pub fn print(&self){
         println!("______ Frame ______");
         println!("Frame: ");
-        for config in self.config.iter(){
-            config.print();
-        }
+        self  .  config  .  xoffset  .  print();
+	self  .  config  .  yoffset  .  print();
+	self  .  config  .  delay    .  print();
         for string in self.frame.iter(){
             println!("{}", string);
         }
         println!("_______ END _______");
     }
 }
+
 
 
 pub struct Animation{ pub frames: Vec<Frame> }
@@ -98,12 +127,11 @@ impl Animation {
 }
 
 
-pub fn initialize_global_configuration() -> Vec<FrameConfiguration>{
-    let mut
-    configuration:Vec<FrameConfiguration> = Vec::new();
-    configuration.push(FrameConfiguration::YOffset(0));
-    configuration.push(FrameConfiguration::XOffset(0));
-    configuration.push(FrameConfiguration::Delay{delay:100});
-    configuration
+pub fn initialize_global_configuration() -> FrameSetting{
+    let mut setting:FrameSetting = FrameSetting;
+    setting.xoffset = FrameConfiguration::XOffset(0);
+    setting.yoffset = FrameConfiguration::YOffset(0);
+    setting.delay   = FrameConfiguration::Delay{delay:100};
+    setting
 }
 
