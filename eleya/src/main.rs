@@ -2,7 +2,7 @@ mod parser;
 mod tools;
 
 use std::{env, str, fs, process::exit, str::Lines};
-use crate::parser::animation_struct::{Animation, Frame, FrameConfiguration, initialize_global_configuration};
+use crate::parser::animation_struct::{Animation, Frame, FrameConfiguration, FrameSetting};
 use crate::tools::cli::vt100::escapes as ESC;
 use crate::tools::cli::output::{error, debug, comment};
 use std::iter::FromIterator;
@@ -12,11 +12,78 @@ use std::borrow::Borrow;
 type uColumn = u16;
 type uLine   = u32;
 
+const COMMENT: &str  = "#";
+const PARAM: &str    = "#:";
+const FRAME: &str    = "---";
+
 
 fn clean_up_string(string: String) -> String{
     String::from(string.trim())
 }
 
+
+is_empty(line: &str) -> bool{
+    clean_up_string(line.to_string()).len() == 0
+}
+is_comment(line: &str) -> bool{
+    match line.len() {
+	0 => true,
+	1 => line[0] == &'#',
+	_ => line[0..2] != &"#:",
+    }
+}
+is_param(line: &str) -> bool{
+    match line.len() {
+	0..1 => false,
+	_ => line[0..2] == &"#:",
+    }
+}
+
+
+fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, FrameSetting>{
+    let mut setting: FrameSetting = FrameSetting::new();
+    let mut line_number = 0;
+    let mut error_count = 0; 
+    loop{
+	let line = lines[line_number];
+        let char_array: Vec<char> = line.chars().collect();
+	
+        if is_empty(line) { line_number += 1; continue; }
+	if is_comment(line) { comment(line); line_number +=1; continue; } 
+        if is_param(&line) {
+            match parse_parameter_opt(char_array.clone()) {
+                Ok((parameter, value)) => {
+                    match parameter.as_str() {
+                        "delay"    => {
+                            if let Some(delay) = FrameConfiguration::parse_delay(&value){
+                                setting.delay = delay;
+                            }
+                        },
+                        "offset-y" => {
+			    if let Some(offset) = FrameConfiguration::parse_yoffset(&value){
+                                setting.yoffset = offset;
+                            }
+			},
+                        "offset-x" => {
+			    if let Some(offset) = FrameConfiguration::parse_xoffset(&value){
+                                setting.xoffset = offset;
+                            }},
+                        _          => {}
+                    };
+                    debug("param parsing", format!("{}={}", parameter, value).as_str())
+                },
+                Err((err_col, err_msg)) => {
+		    error_count += 1;
+                    error(String::from_iter(&char_array).as_str(), "Parsing error", err_msg.as_str(), 0, err_col);
+                }
+            }
+        }
+    }
+    match error_count {
+	0 => Ok (setting),
+	_ => Err(setting),
+    }
+}
 
 
 fn parse_parameter_opt(line: Vec<char>) -> Result<(String, String), (uColumn, String)> {
@@ -43,16 +110,21 @@ fn parse_parameter_opt(line: Vec<char>) -> Result<(String, String), (uColumn, St
 }
 
 
+// fn parse_multiline(
 
 
 
 fn create_animation(path: &String){
+    let mut animation     = Animation   ::new();
+    let mut root_setting = FrameSetting::new();
+
+    
 //    let mut frame_global_config: FrameConfiguration = Vec::new();
-    let mut animation = Animation::new();
+    
     println!("Animation File:{} ", path);
     let file:String = fs::read_to_string(path).expect("");
     let lines:Vec<&str> = file.lines().collect();
-    let mut default_animation_config = initialize_global_configuration();
+
     if  lines.len() == 0 {return}
     let mut line_iterator = lines.iter();
     let mut line_number = 0;
