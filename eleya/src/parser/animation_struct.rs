@@ -6,6 +6,7 @@ pub enum FrameConfiguration{
     XOffset(u8),
     YOffset(u8),
 }
+#[allow(dead_code)]
 impl FrameConfiguration{
     pub fn x_offset(offset: u8) { FrameConfiguration::XOffset(offset); }
     pub fn y_offset(offset: u8) { FrameConfiguration::YOffset(offset); }
@@ -97,8 +98,6 @@ impl ToString for Frame{
         format!("{}\n{}", self.config.to_string(), self.frame.join("\n"))
     }
 }
-
-
 
 
 pub struct Animation{ pub frames: Vec<Frame> }
