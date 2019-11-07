@@ -33,7 +33,7 @@ fn is_param(line: &str) -> bool{
         _     => {&line[0..2] == PARAM},
     }
 }
-fn is_frame(line: &str) -> bool{
+pub fn is_frame(line: &str) -> bool{
     match line.len() {
         0...2 => {false},
         _     => {&line[0..3] == FRAME},
@@ -151,7 +151,7 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, FrameSetting>{
 
 
 fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b mut FrameSetting) -> Result<String, (String, String)> {
-    let (param, value) = param_value;
+    let (param, value):(&str, &str) = param_value;
 //    info(format!("{}={}", param, value).as_str());
     match param {
         "delay"  => {
@@ -257,3 +257,24 @@ fn main() {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_line_is_comment(){assert_eq!(4, 4);}
+
+    #[test]
+    fn the_line_is_parameter(){assert_eq!(4, 4);}
+
+    #[test]
+    fn the_line_is_frame(){assert_eq!(4, 4);}
+
+    #[test]
+    fn parsing_parameter_line(){assert_eq!(4, 4);}
+
+    #[test]
+    fn validate_value_parameter(){assert_eq!(4, 4);}
+
+
+}
