@@ -6,7 +6,50 @@ use crate::parser::animation_struct::{Animation, Frame, FrameConfiguration, Fram
 
 use crate::tools::cli::output::{error, info, error_line};
 use std::iter::FromIterator;
+use std::ops::Add;
+use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
 
+// ---------------------------------------
+
+struct LogTrace{
+    logs: Vec<Log>,
+    id: String,
+}
+impl LogTrace {
+    pub fn generate_id()->String{
+	let rand_key = thread_rng().sample_iter(&Alphanumeric).take(30).collect();
+	rand_key
+    }
+
+}
+struct MessageList{
+    list: LogTrace,
+}
+impl MessageList{
+    pub fn get_all(&self){
+	for log_trace for self.list.iter(){
+	    for log for log_trace.logs.iter() {
+		pritnln("{}", log.to_string());
+	    }
+	}
+    }
+}
+
+
+impl Add<LogStatus> for LogStatus {
+    type Output = LogStatus;
+
+    fn add(self, _rhs: LogStatus) -> LogStatus {
+        match self {
+	    LogStatus::Error => LogStatus::Error,
+	    _ => _rhs,
+	}
+    }
+}
+
+
+// ---------------------------------------
 
 
 //static mut ANIMATION_STACK:Animation = Animation::new();
@@ -17,14 +60,54 @@ const COMMENT: &str  = "#";
 const PARAM:   &str  = "#:";
 const FRAME:   &str  = "---";
 
+// TEST
+fn test_is_empty(){
+    assert_eq!(true, is_empty("     "));
+    assert_eq!(false, is_empty(" _ "));
+}
+fn test_is_param(){
+    assert_eq!(true, is_param("  #:dupa"));
+    assert_eq!(true, is_param("#:"));
+    assert_eq!(true, is_param("#:bliat=suka"));
+}
+fn test_is_comment(){
+    assert_eq!(false, is_param("#:bliat=suka"));
+    assert_eq!(true, is_param("#"));
+    assert_eq!(true, is_param(""));
+    assert_eq!(true, is_param("#d"));
+    assert_eq!(true, is_param("# Comment"));
+}
+fn test_is_frame(){
+    assert_eq!(false, is_param("--"));
+    assert_eq!(true, is_param("---"));
+    assert_eq!(true, is_param("  ---  "));
+    assert_eq!(true, is_param("------  "));
+}
+fn test_param_parser(){
+    if let Result::Err(_, _) = parameter_syntax_analizator("#:sukin=syn"){
+	panic!("unparsed param");
+    }
+    if let Result::Err(_, _) = parameter_syntax_analizator("   #:sukin=syn"){
+	panic!("unparsed param with space");
+    }
+    if let Result::Err(_, _) = parameter_syntax_analizator("#: sukin = syn"){
+	panic!("unparsed param with space between word");
+    }
+    if let Result::Err(_, _) = parameter_syntax_analizator("#:sukin="){
+	panic!("unparsed param with no value");
+    }
+}
+
+// TEST
+
 fn is_empty(line: &str) -> bool{
     line.to_string().trim().len() == 0
 }
 fn is_comment(line: &str) -> bool{
     match line.len() {
         0 => {true},
-        _ => {&line[0..1] == COMMENT},
-//        _ => {&line[0..2] != PARAM},
+        1 => {&line[0..1] == COMMENT},
+	    _ => {&line[0..1] == COMMENT && &line[0..1] != PARAM},
     }
 }
 fn is_param(line: &str) -> bool{
@@ -39,8 +122,7 @@ pub fn is_frame(line: &str) -> bool{
         _     => {&line[0..3] == FRAME},
     }
 }
-fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting ) -> Result<Animation, String> {
-//    let mut error_count = 0;
+fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting ) -> Result<Animation, LogStatus> {
     if let Option::Some(position) = lines.iter().position(|&line| is_frame(line.trim())) {
         let mut animation: Animation    = Animation    ::new();
         let mut line_number:ULine = position;
@@ -100,7 +182,7 @@ fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting 
 //    Result::Err("In time frame parsing: undefinied error".to_string())
 }
 
-fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, FrameSetting>{
+fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogStatus>{
     let mut setting: FrameSetting = FrameSetting::new();
     let mut line_number:ULine = 0;
     let line_number_max:ULine = (lines.len() - 1) as ULine;
@@ -150,8 +232,8 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, FrameSetting>{
 }
 
 
-fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b mut FrameSetting) -> Result<String, (String, String)> {
-    let (param, value):(&str, &str) = param_value;
+fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b mut FrameSetting) -> Result<String, LogStatus> {
+    let (param, value) = param_value;
 //    info(format!("{}={}", param, value).as_str());
     match param {
         "delay"  => {
@@ -195,6 +277,12 @@ fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b 
 }
 
 
+fn get_columnts(line: &str, searched_text: &str) -> Option<(UColumn, UColumn)> {
+    match line.find(searched_text) {
+	Option::Some(value) => value + searched_text
+    }
+}
+
 fn parameter_syntax_analizator(line: Vec<char>) -> Result<(String, String), (UColumn, String)> {
     let param = &line[2..];
     if String::from_iter(param).trim().len() == 0 {
@@ -213,7 +301,6 @@ fn parameter_syntax_analizator(line: Vec<char>) -> Result<(String, String), (UCo
         let end_line = String::from_iter(param).trim().len();
         return Result::Err((2+end_line as UColumn, String::from("Expected '='(equal) symbol")));
     }
-//    return Result::Err((0, String::from("Unknown parsing error")));
 }
 
 fn create_animation(path: &String) {
@@ -245,6 +332,7 @@ fn exit_program(){
     println!("Have a nice day)");
     exit(0);
 }
+
 
 fn main() {
     let cli_arguments: Vec<String> = env::args().collect();
