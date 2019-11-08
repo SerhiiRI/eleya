@@ -11,6 +11,8 @@ pub struct LogLocation{
     column_from:usize,
     column_to  :usize,
 }
+
+
 pub enum LogStatus{
     Error,
     Info,
@@ -74,6 +76,7 @@ impl Add<LogStatus> for LogStatus {
         }
     }
 }
+
 
 #[derive(Copy, Clone)]
 pub struct LogStyle{
