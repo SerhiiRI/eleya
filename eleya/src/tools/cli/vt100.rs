@@ -65,9 +65,6 @@ pub mod escapes {
     pub const INSERT_LINES: &str = "\x1B[{}L"; // Inserts {} lines into the buffer at the cursor position. The line the cursor is on, and lines below it, will be shifted downwards
     pub const DELETE_LINES: &str = "\x1B[{}M"; // Deletes {} lines from the buffer, starting with the row the cursor is on.
     
-    pub const ERASE_TO_END_LINE: &str = "\x1B[";
-    pub const ERASE_TO_END_LINE: &str = "\x1B[";
-    
     pub const SOFT_RESET_TERMINAL_SETTINGS: &str = "\x1B[!p";
     
     
