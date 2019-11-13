@@ -1,58 +1,19 @@
 mod parser;
 mod tools;
+use crate::parser::animation_struct::{Animation, Frame, FrameConfiguration, FrameSetting};
+use crate::parser::logger::log_attribute as LogAttribute;
+use crate::parser::logger::log_stack as Logger;
+use crate::tools::cli::output::{error, info, error_line};
 
 use std::{env, str, fs, process::exit};
-use crate::parser::animation_struct::{Animation, Frame, FrameConfiguration, FrameSetting};
-
-use crate::tools::cli::output::{error, info, error_line};
 use std::iter::FromIterator;
 use std::ops::Add;
 use rand::{thread_rng, Rng};
 use rand::distributions::Alphanumeric;
 
-// ---------------------------------------
-
-struct LogTrace{
-    logs: Vec<Log>,
-    id: String,
-}
-impl LogTrace {
-    pub fn generate_id()->String{
-	let rand_key = thread_rng().sample_iter(&Alphanumeric).take(30).collect();
-	rand_key
-    }
-
-}
-struct MessageList{
-    list: LogTrace,
-}
-impl MessageList{
-    pub fn get_all(&self){
-	for log_trace for self.list.iter(){
-	    for log for log_trace.logs.iter() {
-		pritnln("{}", log.to_string());
-	    }
-	}
-    }
-}
+use crate::parser::log::*;
 
 
-impl Add<LogStatus> for LogStatus {
-    type Output = LogStatus;
-
-    fn add(self, _rhs: LogStatus) -> LogStatus {
-        match self {
-	    LogStatus::Error => LogStatus::Error,
-	    _ => _rhs,
-	}
-    }
-}
-
-
-// ---------------------------------------
-
-
-//static mut ANIMATION_STACK:Animation = Animation::new();
 type UColumn = usize;
 type ULine   = usize;
 
@@ -60,45 +21,6 @@ const COMMENT: &str  = "#";
 const PARAM:   &str  = "#:";
 const FRAME:   &str  = "---";
 
-// TEST
-fn test_is_empty(){
-    assert_eq!(true, is_empty("     "));
-    assert_eq!(false, is_empty(" _ "));
-}
-fn test_is_param(){
-    assert_eq!(true, is_param("  #:dupa"));
-    assert_eq!(true, is_param("#:"));
-    assert_eq!(true, is_param("#:bliat=suka"));
-}
-fn test_is_comment(){
-    assert_eq!(false, is_param("#:bliat=suka"));
-    assert_eq!(true, is_param("#"));
-    assert_eq!(true, is_param(""));
-    assert_eq!(true, is_param("#d"));
-    assert_eq!(true, is_param("# Comment"));
-}
-fn test_is_frame(){
-    assert_eq!(false, is_param("--"));
-    assert_eq!(true, is_param("---"));
-    assert_eq!(true, is_param("  ---  "));
-    assert_eq!(true, is_param("------  "));
-}
-fn test_param_parser(){
-    if let Result::Err(_, _) = parameter_syntax_analizator("#:sukin=syn"){
-	panic!("unparsed param");
-    }
-    if let Result::Err(_, _) = parameter_syntax_analizator("   #:sukin=syn"){
-	panic!("unparsed param with space");
-    }
-    if let Result::Err(_, _) = parameter_syntax_analizator("#: sukin = syn"){
-	panic!("unparsed param with space between word");
-    }
-    if let Result::Err(_, _) = parameter_syntax_analizator("#:sukin="){
-	panic!("unparsed param with no value");
-    }
-}
-
-// TEST
 
 fn is_empty(line: &str) -> bool{
     line.to_string().trim().len() == 0
@@ -122,12 +44,11 @@ pub fn is_frame(line: &str) -> bool{
         _     => {&line[0..3] == FRAME},
     }
 }
-fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting ) -> Result<Animation, LogStatus> {
+fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting ) -> Result<Animation, LogAttribute::LogStatus> {
     if let Option::Some(position) = lines.iter().position(|&line| is_frame(line.trim())) {
         let mut animation: Animation    = Animation    ::new();
         let mut line_number:ULine = position;
         let line_number_max:ULine = (lines.len() - 1) as ULine;
-
         loop{
             if line_number == line_number_max {break;}
             if is_frame(lines[line_number]){
@@ -142,7 +63,7 @@ fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting 
                         if let Option::Some(column_number) = lines[line_number].chars().collect::<Vec<char>>().iter().position(|&x| x == '=') {
                             start_value = column_number + 1;
                         }
-                        match parameter_syntax_analizator(lines[line_number].chars().collect::<Vec<char>>().clone()) {
+                        match parameter_syntax_analizator(lines[line_number]) {
                             Ok((parameter, value)) => {
                                 match setting_up_parameter((parameter.as_str(), value.as_str()), root_setting) {
                                     Result::Err((error_header, error_message)) => {
@@ -179,7 +100,6 @@ fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting 
 
         return Result::Err("No frame found. To create frame draw your frame between '---' delimiters ".to_string());
     }
-//    Result::Err("In time frame parsing: undefinied error".to_string())
 }
 
 fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogStatus>{
@@ -277,13 +197,41 @@ fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b 
 }
 
 
-fn get_columnts(line: &str, searched_text: &str) -> Option<(UColumn, UColumn)> {
+fn get_columns(line: &str, searched_text: &str) -> (UColumn, UColumn) {
     match line.find(searched_text) {
-	Option::Some(value) => value + searched_text
+        Option::Some(value) => (value, value + searched_text.len()),
+        Option::None => {
+            let line_trim = line.len();
+            match line.find(line_trim){
+                Option::Some(value) => (value, value+line_trim),
+                Option::None => (0,0),
+            }
+        }
     }
 }
 
-fn parameter_syntax_analizator(line: Vec<char>) -> Result<(String, String), (UColumn, String)> {
+//fn parameter_syntax_analizator(line: Vec<char>) -> Result<(String, String), (UColumn, String)> {
+//    let param = &line[2..];
+//    if String::from_iter(param).trim().len() == 0 {
+//        return Result::Err((2, String::from("The parameter is empty, nonetheless param annotation(#:) is")));
+//    }
+//    if let Some(pos) = param.iter().position(|&x| x == '=') {
+//        let param_name: String = String::from_iter(&param[0..pos]).trim().to_string();
+//        let value: String = String::from_iter(&param[(pos+1)..]).trim().to_string();
+//        if let Some(size) = param_name.find(' ') {
+//            return Result::Err((2+size as UColumn, String::from("Not approved space symbol in parameter name")))
+//        }
+//        if param_name.len() == 0 {
+//            return Result::Err((2, String::from("Parameter is empty")));}
+//        return Result::Ok((param_name, value));
+//    } else {
+//        let end_line = String::from_iter(param).trim().len();
+//        return Result::Err((2+end_line as UColumn, String::from("Expected '='(equal) symbol")));
+//    }
+//}
+
+fn parameter_syntax_analizator(line_str: &str) -> Result<(String, String), (UColumn, String)> {
+    let line:Vec<char> = line_str.trim().chars().collect::<Vec<char>>();
     let param = &line[2..];
     if String::from_iter(param).trim().len() == 0 {
         return Result::Err((2, String::from("The parameter is empty, nonetheless param annotation(#:) is")));
@@ -350,19 +298,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_line_is_comment(){assert_eq!(4, 4);}
+    fn test_is_empty(){
+        assert_eq!(true, is_empty("     "));
+        assert_eq!(false, is_empty(" _ "));
+    }
 
     #[test]
-    fn the_line_is_parameter(){assert_eq!(4, 4);}
+    fn test_is_param(){
+        assert_eq!(true, is_param("  #:dupa"));
+        assert_eq!(true, is_param("#:"));
+        assert_eq!(true, is_param("#:bliat=suka"));
+    }
 
     #[test]
-    fn the_line_is_frame(){assert_eq!(4, 4);}
+    fn test_is_comment(){
+        assert_eq!(false, is_param("#:bliat=suka"));
+        assert_eq!(true, is_param("#"));
+        assert_eq!(true, is_param(""));
+        assert_eq!(true, is_param("#d"));
+        assert_eq!(true, is_param("# Comment"));
+    }
 
     #[test]
-    fn parsing_parameter_line(){assert_eq!(4, 4);}
+    fn test_is_frame(){
+        assert_eq!(false, is_param("--"));
+        assert_eq!(true, is_param("---"));
+        assert_eq!(true, is_param("  ---  "));
+        assert_eq!(true, is_param("------  "));
+    }
 
     #[test]
-    fn validate_value_parameter(){assert_eq!(4, 4);}
-
+    #[should_panic]
+    fn test_param_parser(){
+        if let Result::Err((_, _)) = parameter_syntax_analizator("#:sukin=syn"){
+            panic!("unparsed param");
+        }
+        if let Result::Err((_, _)) = parameter_syntax_analizator("   #:sukin=syn"){
+            panic!("unparsed param with space");
+        }
+        if let Result::Err((_, _)) = parameter_syntax_analizator("#: sukin = syn"){
+            panic!("unparsed param with space between word");
+        }
+        if let Result::Err((_, _)) = parameter_syntax_analizator("#:sukin="){
+            panic!("unparsed param with no value");
+        }
+    }
 
 }

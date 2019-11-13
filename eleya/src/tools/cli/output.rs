@@ -2,7 +2,7 @@ use crate::tools::cli::vt100::escapes as ESC;
 
 
 #[allow(dead_code)]
-fn generate_status<'b, 'a>(a: &'b str, b: &'a str, c: &'b str) -> String{
+fn generate_status<'b, 'a>(a: &'b str, b: &'a str, c: &'b str) -> String {
     format!("({}{}{})", a, b, c)
 }
 #[allow(dead_code)]
