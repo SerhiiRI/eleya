@@ -59,7 +59,6 @@ impl Log {
             status,
         }
     }
-    
     fn styling(text: &String, style: &LogStyle) -> String{
         format!("{}{}{}", style.color, text, ESC::RESET)
     }
