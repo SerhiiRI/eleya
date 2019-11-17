@@ -1,6 +1,6 @@
-<div align="center">
+<!--div align="center">
 <img width="40%" src="https://github.com/SerhiiRI/eleya/blob/master/info/img/eleya_logo.png">
-</div>
+</div-->
 
 # Eleya
 Eleya is a simple animation program with code-generation functionality.
