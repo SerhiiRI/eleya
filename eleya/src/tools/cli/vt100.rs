@@ -69,8 +69,8 @@ pub mod escapes {
     
     
     // DEC Line drawing mode
-    pub const DEC_MODE_ENABLE:  &str = "\x(0";
-    pub const DEC_MODE_DISABLE: &str = "\x(B";
+    pub const DEC_MODE_ENABLE:  &str = "\x1B(0";
+    pub const DEC_MODE_DISABLE: &str = "\x1B(B";
     // box charset
     pub const DEC_6a: &str = "0x6a"; // ┘
     pub const DEC_6b: &str = "0x6b"; // ┐

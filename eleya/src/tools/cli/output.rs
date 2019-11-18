@@ -31,7 +31,6 @@ pub fn error_line(error_msg: &str) {
 pub fn info(error_msg: &str) {
     println!("{} {}", generate_status(ESC::BOLD, "info", ESC::RESET), error_msg);
 }
-
 #[allow(dead_code)]
 pub fn debug<'a>(msg: &'a str, line: &'a str){
     println!("{} {} : {}\n"
