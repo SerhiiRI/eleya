@@ -21,18 +21,18 @@ use crate::parser::logger::log_attribute::*;
 /// also maybe one line, char or whole region.
 ///
 pub enum Log{
-    SyntaxLog {status: LogStatus, message: String, header: String, text: String, style: LogStyle, location: LogLocation},
+    SyntaxLog {status: LogStatus, message: String, header: String, text: &Vec<&str>, style: LogStyle, location: Vec<LogLocation>},
     GeneralLog{status: LogStatus, message: String, header: String, style: LogStyle},
     SimpleLog {status: LogStatus, message: String, style: LogStyle},
     CustomLog {status: LogStatus, message: String}
 }
 #[allow(dead_code)]
 impl Log {
-    pub fn syntax_log(message: &str, header: &str,  text: &str, status: LogStatus, style: LogStyle, location: LogLocation) -> Log{
+    pub fn syntax_log(message: &str, header: &str,  text: &Vec<&str>, status: LogStatus, style: LogStyle, location: Vec<LogLocation>) -> Log{
         Log::SyntaxLog {
             message: message.to_string(),
             header: header.to_string(),
-            text: text.to_string(),
+            text,
             status,
             style,
             location,
@@ -74,55 +74,50 @@ impl Log {
             }
         }
     }
-    fn view(&self){
+    fn line_and_column_output(&self) -> String {
+        match self {
+            Log::SyntaxLog { status, message, header, text, style, location } => {
+                match location.len() {
+                    0 => "".to_string(),
+                    1 => {
+                        let default_location = LogLocation{ lines: 0, columns: (0, 0) };
+                        let LogLocation { lines:l, columns: (c1,c2) } = &location.get(0).unwrap_or(&default_location);
+                        return format!("(L{},C{}:{})", l, c1, c2);
+                    }
+                    _ => {
+                        if let (Option::Some(loc_1), Option::Some(loc_2)) =  (location.first(), location.last()) {
+                            return format!("(L{}-{}", loc_1.lines, loc_2.lines);
+                        }
+                    }
+                }
+            },
+            _ => {}
+        }
+        "".to_string()
+    }
+    pub fn view(&self) -> String {
         match self {
             Log::CustomLog { status, message } => {
-                format!("{} {}", status.get(Option::None), message);
+                format!("{} {}", status.get(Option::None), message)
             }
             Log::SimpleLog { status, message, style } => {
-                format!("{} {}{}", status.get(Option::None), Log::styling(message, style));
+                format!("{} {}", status.get(Option::None), Log::styling(message, style))
             }
             Log::GeneralLog { status, message, header, style } => {
-                format!("{} {}{}:\n{}", status.get(Option::None), Log::styling(header, style), message)
+                format!("{} {}:\n{}", status.get(Option::None), Log::styling(header, style), message)
             }
             Log::SyntaxLog { status, message, header, text, style, location } => {
                 let lines = text.lines().collect::<Vec<&str>>();
-                let mut _vstr: Vec<String> = Vec::new();
-                for l in lines.iter() {
-                    if l.trim() != 0 {
-                        _vstr.push(l.to_string());
-                    }
-
-                    fn multiline_view(lines: &Vec<&str>) {}
-                    fn oneline_view() {}
-
-                    fn syntax_log_view() {
-                        println!("{} {} in line {} :\n"
-                                 , generate_status(ESC::RED, "error", ESC::RESET)
-                                 , error_header
-                                 , line_and_column_output(line_number, 1 + column_number));
-                        let offset = (0..column_number).map(|_| " ").collect::<String>();
-                        println!("{}", line);
-                        println!("{}^---- {}", offset, error_msg);
-                        println!();
-                    }
-
-                    fn global_view() {
-                        println!("{} {} in line {} :\n"
-                                 , generate_status(ESC::RED, "error", ESC::RESET)
-                                 , error_header
-                                 , line_and_column_output(line_number, 1 + column_number));
-                        let offset = (0..column_number).map(|_| " ").collect::<String>();
-                        println!("{}", line);
-                        println!("{}^---- {}", offset, error_msg);
-                        println!();
-                    }
-
-                    #[allow(dead_code)]
-                    fn generate_status<'b, 'a>(a: &'b str, b: &'a str, c: &'b str) -> String {
-                        format!("({}{}{})", a, b, c)
-                    }
+                let mut log_message = format!("{} {} in line {} :\n"
+                                      , status.get(Option::None), header,
+                                      , self.line_and_column_output());
+                for LogLocation{lines: index, columns: (start, end)} in location {
+                    let offset =     (0..start)  .map(|_| " ").collect::<String>();
+                    let underscore = (start..end).map(|_| "^").collect::<String>();
+                    log_message.push_str(format!("{}\n{}{}\n",lines[indx], offset, underscore).as_str());
                 }
+                log_message.push_str(format!("{}", message).as_str());
+                log_message
             }
         }
     }
@@ -135,19 +130,40 @@ impl ToString for LogStyle{
 
 
 
-struct LogTrace{
+pub struct LogTrace{
     logs: Vec<Log>,
     id: Option<String>,
 }
 impl LogTrace {
-    pub fn generate_id()->String{
-        let rand_key = thread_rng().sample_iter(&Alphanumeric).take(30).collect();
-        rand_key
+    pub fn generate_id() -> String {
+        thread_rng().sample_iter(&Alphanumeric).take(10).collect()
+    }
+    pub fn generate_id_not_duplicate(message_list: MessageList) -> String {
+        let _tmp01 = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        message_list.list.into_iter().find(
+            | item_trace: &LogTrace |
+                match item_trace.id {
+                    Some(id_string) => &id_string == &_tmp01,
+                    _ => false
+                }
+        );
+        thread_rng().sample_iter(&Alphanumeric).take(10).collect()
+    }
+    pub fn new() -> LogTrace() {
+        LogTrace{ logs: Vec::<Log>::new(), id: Option::None }
+    }
+
+    pub fn set_id(&mut self, id: String) {
+        self.id = Option::Some(id);
+    }
+
+    pub fn push(&mut self, log: Log){
+        self.logs.push(log);
     }
 }
 
-struct MessageList{
-    list: LogTrace,
+pub struct MessageList{
+    list: Vec<LogTrace>,
 }
 impl MessageList {
     pub fn get_all(&self) {
@@ -155,6 +171,14 @@ impl MessageList {
             for log in log_trace.logs.iter() {
                 pritnln("{}", log.to_string());
             }
+        }
+    }
+    pub fn new() -> MessageList{
+        MessageList { list: Vec::<LogTrace>::new() }
+    }
+    pub fn push(&mut self, trace: LogTrace){
+        if !trace.logs.is_empty() {
+            self.list.push(trace);
         }
     }
 }
