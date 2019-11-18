@@ -11,7 +11,8 @@ use std::ops::Add;
 use rand::{thread_rng, Rng};
 use rand::distributions::Alphanumeric;
 
-use crate::parser::log::*;
+use crate::parser::logger::log_stack::MessageList;
+use crate::parser::logger::log_attribute::LogStatus;
 
 
 type UColumn = usize;
@@ -21,6 +22,7 @@ const COMMENT: &str  = "#";
 const PARAM:   &str  = "#:";
 const FRAME:   &str  = "---";
 
+static mut MESSAGE_PIPE:MessageList = MessageList::new();
 
 fn is_empty(line: &str) -> bool{
     line.to_string().trim().len() == 0
@@ -38,12 +40,13 @@ fn is_param(line: &str) -> bool{
         _     => {&line[0..2] == PARAM},
     }
 }
-pub fn is_frame(line: &str) -> bool{
+fn is_frame(line: &str) -> bool{
     match line.len() {
         0...2 => {false},
         _     => {&line[0..3] == FRAME},
     }
 }
+
 fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting ) -> Result<Animation, LogAttribute::LogStatus> {
     if let Option::Some(position) = lines.iter().position(|&line| is_frame(line.trim())) {
         let mut animation: Animation    = Animation    ::new();
@@ -65,19 +68,21 @@ fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting 
                         }
                         match parameter_syntax_analizator(lines[line_number]) {
                             Ok((parameter, value)) => {
-                                match setting_up_parameter((parameter.as_str(), value.as_str()), root_setting) {
+                                match setting_up_parameter((parameter.as_str(), value.as_str()), log_status) {
+
                                     Result::Err((error_header, error_message)) => {
 //                                        error_count += 1;
                                         error(lines[line_number], error_header.as_str(), error_message.as_str(), line_number, start_value);
-                                        return Result::Err("Please verify parameter name or correct param value form".to_string())
+//                                        return Result::Err("Please verify parameter name or correct param value form".to_string())
+                                        return Result::Err(LogAttribute::LogStatus::Error);
                                     }
                                     _ => {}
                                 }
                             },
-                            Err((err_col, err_msg)) => {
-//                                error_count += 1;
+                            Err(log_status) => {
                                 error(lines[line_number], "Parsing error", err_msg.as_str(), 0, err_col);
-                                return Result::Err("Param syntax is not allowed".to_string())
+                                // return Result::Err("Param syntax is not allowed".to_string())
+                                return Result::Err(log_status + LogAttribute::LogStatus::Error);
                             }
                         }
                         line_number+=1;
@@ -97,12 +102,12 @@ fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting 
         return Result::Ok(animation);
     }
     else {
-
-        return Result::Err("No frame found. To create frame draw your frame between '---' delimiters ".to_string());
+//        return Result::Err("No frame found. To create frame draw your frame between '---' delimiters ".to_string());
+        return Result::Err(LogAttribute::LogStatus::Error);
     }
 }
 
-fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogStatus>{
+fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogAttribute::LogStatus>{
     let mut setting: FrameSetting = FrameSetting::new();
     let mut line_number:ULine = 0;
     let line_number_max:ULine = (lines.len() - 1) as ULine;
@@ -119,7 +124,7 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogStatus>{
             if let Option::Some(column_number) = char_array.iter().position(|&x| x == '=') {
                 start_value = column_number + 1;
             }
-            match parameter_syntax_analizator(char_array.clone()) {
+            match parameter_syntax_analizator(line) {
                 Ok((parameter, value)) => {
                     match setting_up_parameter((parameter.as_str(), value.as_str()), &mut setting) {
                         Result::Err((error_header, error_message)) => {
@@ -129,7 +134,7 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogStatus>{
                     }
                     // debug("param parsing", format!("{}={}", parameter, value).as_str())
                 },
-                Err((err_col, err_msg)) => {
+                Err(log_status) => {
                     error_count += 1;
                     error(String::from_iter(&char_array).as_str(), "Parsing error", err_msg.as_str(), line_number, err_col);
                 }
@@ -146,13 +151,13 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogStatus>{
         0 => Ok (setting),
         _ => {
             info(format!("Application finished with {} error(-s)", error_count).as_str());
-            Err(setting)
+            Err(LogAttribute::LogStatus::Error)
         },
     }
 }
 
 
-fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b mut FrameSetting) -> Result<String, LogStatus> {
+fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b mut FrameSetting) -> Result<String, LogAttribute::LogStatus> {
     let (param, value) = param_value;
 //    info(format!("{}={}", param, value).as_str());
     match param {
@@ -163,7 +168,8 @@ fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b 
                     setting.delay = delay;
                 }
                 Result::Err(message) => {
-                    return Result::Err(("Value parsing error".to_string(), message));
+//                    return Result::Err(("Value parsing error".to_string(), message));
+                    return Result::Err(LogAttribute::LogStatus::Error);
                 }
             }
         },
@@ -174,7 +180,8 @@ fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b 
                     setting.yoffset = offset;
                     }
                 Result::Err(message) => {
-                    return Result::Err(("Value parsing error".to_string(), message));
+//                    return Result::Err(("Value parsing error".to_string(), message));
+                    return Result::Err(LogAttribute::LogStatus::Error);
                 }
             }
         },
@@ -185,19 +192,21 @@ fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b 
                     setting.xoffset = offset;
                 }
                 Result::Err(message) => {
-                    return Result::Err(("Value parsing error".to_string(), message));
+//                    return Result::Err(("Value parsing error".to_string(), message));
+                    return Result::Err(LogAttribute::LogStatus::Error);
                 }
             }
         },
         _ => {
-            return Result::Err(("Parsing error".to_string(), format!("parameter name '{}' is not defined", param)));
+//            return Result::Err(("Parsing error".to_string(), format!("parameter name '{}' is not defined", param)));
+            return Result::Err(LogAttribute::LogStatus::Error);
         }
     };
     Result::Ok("Success".to_string())
 }
 
-
-fn get_columns(line: &str, searched_text: &str) -> (UColumn, UColumn) {
+#[allow(dead_code)]
+fn column_in_line(line: &str, searched_text: &str) -> (UColumn, UColumn) {
     match line.find(searched_text) {
         Option::Some(value) => (value, value + searched_text.len()),
         Option::None => {
@@ -210,56 +219,53 @@ fn get_columns(line: &str, searched_text: &str) -> (UColumn, UColumn) {
     }
 }
 
-//fn parameter_syntax_analizator(line: Vec<char>) -> Result<(String, String), (UColumn, String)> {
-//    let param = &line[2..];
-//    if String::from_iter(param).trim().len() == 0 {
-//        return Result::Err((2, String::from("The parameter is empty, nonetheless param annotation(#:) is")));
-//    }
-//    if let Some(pos) = param.iter().position(|&x| x == '=') {
-//        let param_name: String = String::from_iter(&param[0..pos]).trim().to_string();
-//        let value: String = String::from_iter(&param[(pos+1)..]).trim().to_string();
-//        if let Some(size) = param_name.find(' ') {
-//            return Result::Err((2+size as UColumn, String::from("Not approved space symbol in parameter name")))
-//        }
-//        if param_name.len() == 0 {
-//            return Result::Err((2, String::from("Parameter is empty")));}
-//        return Result::Ok((param_name, value));
-//    } else {
-//        let end_line = String::from_iter(param).trim().len();
-//        return Result::Err((2+end_line as UColumn, String::from("Expected '='(equal) symbol")));
-//    }
-//}
-
-fn parameter_syntax_analizator(line_str: &str) -> Result<(String, String), (UColumn, String)> {
+fn parameter_syntax_analizator(line_str: &str) -> Result<(String, String), LogStatus> {
     let line:Vec<char> = line_str.trim().chars().collect::<Vec<char>>();
     let param = &line[2..];
     if String::from_iter(param).trim().len() == 0 {
-        return Result::Err((2, String::from("The parameter is empty, nonetheless param annotation(#:) is")));
+//        return Result::Err((2, String::from("The parameter is empty, nonetheless param annotation(#:) is")));
+        return Result::Err(LogAttribute::LogStatus::Error);
     }
     if let Some(pos) = param.iter().position(|&x| x == '=') {
         let param_name: String = String::from_iter(&param[0..pos]).trim().to_string();
         let value: String = String::from_iter(&param[(pos+1)..]).trim().to_string();
         if let Some(size) = param_name.find(' ') {
-            return Result::Err((2+size as UColumn, String::from("Not approved space symbol in parameter name")))
+//            return Result::Err((2+size as UColumn, String::from("Not approved space symbol in parameter name")))
+            return Result::Err(LogAttribute::LogStatus::Error)
         }
         if param_name.len() == 0 {
-            return Result::Err((2, String::from("Parameter is empty")));}
+//            return Result::Err((2, String::from("Parameter is empty")));}
+            return Result::Err(LogAttribute::LogStatus::Error)
+        }
         return Result::Ok((param_name, value));
     } else {
         let end_line = String::from_iter(param).trim().len();
-        return Result::Err((2+end_line as UColumn, String::from("Expected '='(equal) symbol")));
+        let log = Logger::Log::SyntaxLog {
+            status: LogStatus::Error,
+            message: "Expected '='(equal) symbol".to_string(),
+            header: "parsing error".to_string(),
+            text: line_str.to_string(),
+            style: LogAttribute::LogStyle::default(),
+            location: vec![LogAttribute::LogLocation{ lines: 0, columns: (0, 0) }]
+        };
+//        return Result::Err((2+end_line as UColumn, String::from("Expected '='(equal) symbol")));
+        return Result::Err(LogAttribute::LogStatus::Error);
     }
 }
 
 fn create_animation(path: &String) {
+
     let file: String = fs::read_to_string(path).expect("");
     let lines: Vec<&str> = file.lines().collect();
     if lines.len() == 0 { return }
     let mut root_settings = FrameSetting::new();
     match initialize_settings(&lines) {
         Result::Ok(header_setting) => { root_settings = header_setting },
-        Result::Err(e) => {
-            exit_program();
+        Result::Err(log_status) => {
+            match log_status:LogAttribute::LogStatus {
+                LogAttribute::LogStatus::Error => exit_program(),
+                _ => exit_program()
+            }
         },
     }
     match initialize_animation_body(&lines, &mut root_settings) {
@@ -268,11 +274,15 @@ fn create_animation(path: &String) {
                 println!("{}", frm.to_string());
             }
         },
-        Err(message) => {
-            error_line(message.as_str());
-            exit_program()
+        Err(log_status) => {
+            match log_status: LogAttribute::LogStatus {
+                LogAttribute::LogStatus::Error => exit_program(),
+                _ => exit_program()
+            }
         },
     }
+
+    // TEST: print finished settings
     info(format!("{}", root_settings.to_string()).as_str());
 }
 
