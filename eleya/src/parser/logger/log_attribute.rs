@@ -1,13 +1,53 @@
 use std::ops::Add;
+use crate::column_in_line;
 
 type TColor = &'static str;
 type TTitle = String;
 
 pub struct LogLocation{
-    pub line_from:usize,
-    pub line_to: usize,
-    pub column_from:usize,
-    pub column_to  :usize,
+    pub lines: usize,
+    pub columns: (usize, usize),
+}
+impl LogLocation {
+    fn column_in_line(line: &str, searched_text: &str) -> Option<(usize, usize)> {
+        match line.find(searched_text) {
+            Option::Some(value) => Option::Some((value, value + searched_text.len())),
+            Option::None => {
+                let line_trim = line.len();
+                match line.find(line_trim){
+                    Option::Some(value) => Option::Some((value, value+line_trim)),
+                    Option::None => Option::None,
+                }
+            }
+        }
+    }
+    fn test_lines(line: &str) -> Option<(usize, usize)> {
+        let trim_line = line.trim();
+        if trim_line == "" {
+            return Option::None;
+        }
+        LogLocation::column_in_line(&trim_line, line)
+    }
+    pub fn lines_of_problem(text: &Vec<&str>) -> Vec<LogLocation>{
+        let mut locations = Vec::<LogLocation>::new();
+        for (indx, line) in text.iter().enumerate() {
+            if let Option::Some(columns) = LogLocation::test_lines(line){
+                locations.push(LogLocation { lines: indx, columns })
+            }
+        }
+        locations
+    }
+    pub fn line_of_problem(error_region: &str, text: &str) -> Vec<LogLocation>{
+        let mut log_location  = LogLocation::new();
+        if let Option::Some(columns) = LogLocation::column_in_line(error_region, text){
+            locations.push(LogLocation { lines: indx, columns })
+        }
+        log_location
+    }
+    pub fn new() -> Vec<LogLocation> {
+        Vec::<LogLocation>::new()
+    }
+
 }
 
 pub enum LogStatus{
