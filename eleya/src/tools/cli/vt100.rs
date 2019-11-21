@@ -44,7 +44,7 @@ pub mod escapes {
     pub const CURSOR_SHOW:&str = "\x1B[25h";
     pub const CURSOR_HIDE:&str = "\x1B[25l";
     
-    // x1B[{}J pattern to clearing screen.
+    // x1B[{} J pattern to clearing screen.
     // x1B[ 1 J: erase from start to cursor.
     // x1B[ 2 J: erase whole display.
     // x1B[ 3 J: erase whole display including scroll-back
@@ -83,8 +83,11 @@ pub mod escapes {
     pub const DEC_76: &str = "0x76"; // ┴
     pub const DEC_77: &str = "0x77"; // ┬
     pub const DEC_78: &str = "0x78"; // │
-    //┌─────────────┐
-    //│             │
+    //┌──────┬──────┐
+    //│   1  │   2  │
+    //├──────┼──────┤
+    //│   1  │   2  │
+    //├──────┴──────┤
     //│  for        │
     //│   drowing   │
     //│     boxes   │

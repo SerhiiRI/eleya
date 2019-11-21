@@ -21,14 +21,14 @@ use crate::parser::logger::log_attribute::*;
 /// also maybe one line, char or whole region.
 ///
 pub enum Log{
-    SyntaxLog {status: LogStatus, message: String, header: String, text: &Vec<&str>, style: LogStyle, location: Vec<LogLocation>},
+    SyntaxLog {status: LogStatus, message: String, header: String, text: Vec<String>, style: LogStyle, location: Vec<LogLocation>},
     GeneralLog{status: LogStatus, message: String, header: String, style: LogStyle},
     SimpleLog {status: LogStatus, message: String, style: LogStyle},
     CustomLog {status: LogStatus, message: String}
 }
 #[allow(dead_code)]
 impl Log {
-    pub fn syntax_log(message: &str, header: &str,  text: &Vec<&str>, status: LogStatus, style: LogStyle, location: Vec<LogLocation>) -> Log{
+    pub fn syntax_log(message: &str, header: &str,  text: Vec<String>, status: LogStatus, style: LogStyle, location: Vec<LogLocation>) -> Log{
         Log::SyntaxLog {
             message: message.to_string(),
             header: header.to_string(),
@@ -107,7 +107,8 @@ impl Log {
                 format!("{} {}:\n{}", status.get(Option::None), Log::styling(header, style), message)
             }
             Log::SyntaxLog { status, message, header, text, style, location } => {
-                let lines = text.lines().collect::<Vec<&str>>();
+//                let lines = text.lines().collect::<Vec<&str>>();
+                let lines = text;
                 let mut log_message = format!("{} {} in line {} :\n"
                                       , status.get(Option::None), header,
                                       , self.line_and_column_output());
