@@ -3,16 +3,18 @@ mod tools;
 use crate::parser::animation_struct::{Animation, Frame, FrameConfiguration, FrameSetting};
 use crate::parser::logger::log_attribute as LogAttribute;
 use crate::parser::logger::log_stack as Logger;
-use crate::tools::cli::output::{error, info, error_line};
+
 
 use std::{env, str, fs, process::exit};
 use std::iter::FromIterator;
 use std::ops::Add;
-use rand::{thread_rng, Rng};
-use rand::distributions::Alphanumeric;
+//use rand::{thread_rng, Rng};
+//use rand::distributions::Alphanumeric;
+use rand::prelude as prelude;
+
 
 use crate::parser::logger::log_stack::MessageList;
-use crate::parser::logger::log_attribute::LogStatus;
+use crate::parser::logger::log_attribute::{LogStatus, LogStyle};
 
 
 type UColumn = usize;
@@ -21,8 +23,8 @@ type ULine   = usize;
 const COMMENT: &str  = "#";
 const PARAM:   &str  = "#:";
 const FRAME:   &str  = "---";
-
 static mut MESSAGE_PIPE:MessageList = MessageList::new();
+//static mut MESSAGE_PIPE:MessageList = MessageList::new();
 
 fn is_empty(line: &str) -> bool{
     line.to_string().trim().len() == 0
@@ -49,7 +51,7 @@ fn is_frame(line: &str) -> bool{
 
 fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting ) -> Result<Animation, LogAttribute::LogStatus> {
     if let Option::Some(position) = lines.iter().position(|&line| is_frame(line.trim())) {
-        let mut animation: Animation    = Animation    ::new();
+        let mut animation:Animation = Animation::new();
         let mut line_number:ULine = position;
         let line_number_max:ULine = (lines.len() - 1) as ULine;
         loop{
@@ -59,7 +61,7 @@ fn initialize_animation_body(lines: &Vec<&str>, root_setting: &mut FrameSetting 
                 let mut frame : Frame = Frame::new();
                 let mut frame_strings:Vec<_> = Vec::new();
                 loop {
-                    if line_number == line_number_max || (lines[line_number].len() >= 3 && &lines[line_number][0..3] == FRAME ) {break;}
+                    if line_number == line_number_max || (lines[line_number].len() >= 3 && lines[line_number][0..3] == FRAME ) {break;}
 
                     if is_param(lines[line_number]) {
                         let mut start_value:UColumn = 2;
@@ -111,20 +113,17 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogAttribute::
     let mut setting: FrameSetting = FrameSetting::new();
     let mut line_number:ULine = 0;
     let line_number_max:ULine = (lines.len() - 1) as ULine;
-    let mut error_count = 0;
     loop{
         let line = lines[line_number].trim();
         let char_array: Vec<char> = line.chars().collect();
-
         if line_number == line_number_max  || ( lines[line_number].len() >= 3 && &lines[line_number][0..3] == FRAME ) {break;}
         if is_empty(line) {line_number += 1; continue;}
-
         if is_param(&line) {
             let mut start_value:UColumn = 2;
             if let Option::Some(column_number) = char_array.iter().position(|&x| x == '=') {
                 start_value = column_number + 1;
             }
-            match parameter_syntax_analizator(line) {
+            match parameter_syntax_analizator(line, line_number) {
                 Ok((parameter, value)) => {
                     match setting_up_parameter((parameter.as_str(), value.as_str()), &mut setting) {
                         Result::Err((error_header, error_message)) => {
@@ -135,14 +134,12 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogAttribute::
                     // debug("param parsing", format!("{}={}", parameter, value).as_str())
                 },
                 Err(log_status) => {
-                    error_count += 1;
                     error(String::from_iter(&char_array).as_str(), "Parsing error", err_msg.as_str(), line_number, err_col);
                 }
             }
             line_number +=1; continue;
         }
         if is_comment(line) {line_number +=1; continue;}
-        error_count += 1;
         error(&line, "Undefined syntax", "the keyword is not known", line_number, 0);
 //        if line_number == line_number_max || (lines[line_number].len() >= 3 && &lines[line_number][0..3] == "---" ) {break;}
         line_number += 1;
@@ -159,16 +156,15 @@ fn initialize_settings(lines: &Vec<&str>) -> Result<FrameSetting, LogAttribute::
 
 fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b mut FrameSetting) -> Result<String, LogAttribute::LogStatus> {
     let (param, value) = param_value;
-//    info(format!("{}={}", param, value).as_str());
     match param {
         "delay"  => {
             match FrameConfiguration::parse_delay(&value) {
                 Result::Ok(delay) => {
-//                    println!("{}", delay.to_string());
                     setting.delay = delay;
                 }
                 Result::Err(message) => {
-//                    return Result::Err(("Value parsing error".to_string(), message));
+                    let e:Logger::Log::GeneralLog = Logger::Log::general_log(message, "Value parsing error", LogStatus, LogAttribute::LogStyle::default());
+                    MESSAGE_PIPE.push(e);
                     return Result::Err(LogAttribute::LogStatus::Error);
                 }
             }
@@ -181,6 +177,8 @@ fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b 
                     }
                 Result::Err(message) => {
 //                    return Result::Err(("Value parsing error".to_string(), message));
+                    let e:Logger::Log::GeneralLog = Logger::Log::general_log(message, "Value parsing error", LogStatus, LogAttribute::LogStyle::default());
+                    MESSAGE_PIPE.push(e);
                     return Result::Err(LogAttribute::LogStatus::Error);
                 }
             }
@@ -188,11 +186,12 @@ fn setting_up_parameter<'a, 'b>(param_value: (&'a str, &'a str) ,  setting: &'b 
         "offset-x" => {
             match FrameConfiguration::parse_xoffset(&value) {
                 Result::Ok(offset) => {
-//                    println!("{}", offset.to_string());
                     setting.xoffset = offset;
                 }
                 Result::Err(message) => {
 //                    return Result::Err(("Value parsing error".to_string(), message));
+                    let e:Logger::Log::GeneralLog = Logger::Log::general_log(message, "Value parsing error", LogStatus, LogAttribute::LogStyle::default());
+                    MESSAGE_PIPE.push(e);
                     return Result::Err(LogAttribute::LogStatus::Error);
                 }
             }
@@ -240,15 +239,11 @@ fn parameter_syntax_analizator(line_str: &str) -> Result<(String, String), LogSt
         return Result::Ok((param_name, value));
     } else {
         let end_line = String::from_iter(param).trim().len();
-        let log = Logger::Log::SyntaxLog {
-            status: LogStatus::Error,
-            message: "Expected '='(equal) symbol".to_string(),
-            header: "parsing error".to_string(),
-            text: line_str.to_string(),
-            style: LogAttribute::LogStyle::default(),
-            location: vec![LogAttribute::LogLocation{ lines: 0, columns: (0, 0) }]
-        };
-//        return Result::Err((2+end_line as UColumn, String::from("Expected '='(equal) symbol")));
+        let llog = Logger::Log::general_log(
+            "Expected '='(equal) symbol".to_string(),
+            "parsing error".to_string(),
+            LogAttribute::LogStatus::Error,
+            LogStyle::default());
         return Result::Err(LogAttribute::LogStatus::Error);
     }
 }
@@ -259,6 +254,8 @@ fn create_animation(path: &String) {
     let lines: Vec<&str> = file.lines().collect();
     if lines.len() == 0 { return }
     let mut root_settings = FrameSetting::new();
+
+
     match initialize_settings(&lines) {
         Result::Ok(header_setting) => { root_settings = header_setting },
         Result::Err(log_status) => {
