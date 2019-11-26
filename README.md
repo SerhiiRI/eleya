@@ -4,4 +4,9 @@
 
 # Eleya
 Eleya is a simple animation program with code-generation functionality.
+<hr>
+
+# TODO: 
+- Dedicated parser
+- Dedicated generator tool 
 
